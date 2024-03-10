@@ -101,7 +101,10 @@ const refillStockpile = (stockpile: Card[], waste: Card[]) => {
 };
 
 const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
+  /* save the first card in the waste to compare at the end */
   const cardToMove = waste[0];
+
+  /* if the card is an Ace, look for the first empty foudnation to put it in */
   if (waste[0].rank === RANK.RANK_A) {
     for (const index in foundations) {
       if (foundations[index].length === 0) {
@@ -110,18 +113,19 @@ const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
       }
     }
   } else {
+    /* if it's not an Ace, look for the pile that matches it's suit and check if it's sequential. if it is, add it to the top of the foundation (beginning of the array) */
     for (const index in foundations) {
-      const foundationSize = foundations[index].length;
       if (isSameSuit(foundations[index][0], waste[0]) &&
-          isInSequence(foundations[index][foundationSize - 1], waste[0])) {
-        foundations[index].push(waste.shift());
+          isInSequence(foundations[index][0], waste[0])) {
+        foundations[index].unshift(waste.shift());
         break;
       }
     }
   }
 
+  /* if card at the top of the waste pile is the same as it was before that means the card was not valid to move, so send a warning */
   if (cardToMove === waste[0]) {
-    console.log('That was not a valid move. Please try again.');
+    console.warn('That was not a valid move.');
   }
 
   return { waste, foundations };

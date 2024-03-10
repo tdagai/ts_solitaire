@@ -15,6 +15,7 @@ const { createCard,
   refillStockpile,
   moveFromWasteToFoundation,
 } = require("../helpers.ts");
+const sinon = require("sinon");
 
 describe('Helper Function Tests', () => {
   describe('Rank & Suit Tests', () => {
@@ -160,7 +161,6 @@ describe('Helper Function Tests', () => {
     it('should move a card from the stockpile to the waste', () => {
       const testDeck = referenceDeck.slice();
       const waste = [];
-      // const cardToMove = referenceDeck[0];
       for (let i = 0; i < referenceDeck.length; i++) {
         fromStockpileToWaste(testDeck, waste);
       }
@@ -179,28 +179,84 @@ describe('Helper Function Tests', () => {
       assert.deepEqual(mockGameState.waste, []);
     });
 
+    describe('moveFromWasteToFoundation', () => {
+      it('should move an Ace from the waste to the first available foundation', () => {
+        let stub = sinon.stub(console, 'warn');
+        let mockGameState = {
+          foundations: {
+            foundation1: [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }],
+            foundation2: [{ rank: RANK.RANK_A, suit: SUIT.CLUB }],
+            foundation3: [],
+            foundation4: [],
+          },
+          waste: [
+            { rank: RANK.RANK_A, suit: SUIT.SPADE },
+            { rank: RANK.RANK_4, suit: SUIT.CLUB },
+            { rank: RANK.RANK_2, suit: SUIT.HEART },
+          ]
+        };
 
-    it('should move an Ace from the waste to the first available foundation', () => {
-      let mockGameState = {
-        foundations: {
-          foundation1: [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }],
-          foundation2: [{ rank: RANK.RANK_A, suit: SUIT.CLUB }],
-          foundation3: [],
-          foundation4: [],
-        },
-        waste: [
-          { rank: RANK.RANK_A, suit: SUIT.SPADE },
-          { rank: RANK.RANK_4, suit: SUIT.CLUB },
-          { rank: RANK.RANK_2, suit: SUIT.HEART },
-        ]
-      };
+        mockGameState = moveFromWasteToFoundation(mockGameState.waste, mockGameState.foundations);
+        assert.deepEqual(
+          mockGameState.foundations.foundation1,
+          [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation2,
+          [{ rank: RANK.RANK_A, suit: SUIT.CLUB }]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation3,
+          [{ rank: RANK.RANK_A, suit: SUIT.SPADE }]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation4,
+          []
+        );
+        assert.equal(mockGameState.waste.length, 2);
+        assert.equal(stub.calledOnce, false);
+        stub.restore();
+      });
+      it('should move a card from the waste to the foundation that matches it\'s suit', () => {
+        let stub = sinon.stub(console, 'warn');
+        let mockGameState = {
+          foundations: {
+            foundation1: [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }],
+            foundation2: [{ rank: RANK.RANK_A, suit: SUIT.CLUB }],
+            foundation3: [],
+            foundation4: [],
+          },
+          waste: [
+            { rank: RANK.RANK_2, suit: SUIT.CLUB },
+            { rank: RANK.RANK_4, suit: SUIT.CLUB },
+            { rank: RANK.RANK_2, suit: SUIT.HEART },
+          ]
+        };
 
-      mockGameState = moveFromWasteToFoundation(mockGameState.waste, mockGameState.foundations);
-      assert.deepEqual(
-        mockGameState.foundations.foundation3,
-        [{ rank: RANK.RANK_A, suit: SUIT.SPADE }]
-      );
-      assert.equal(mockGameState.waste.length, 2);
+        mockGameState = moveFromWasteToFoundation(mockGameState.waste, mockGameState.foundations);
+        assert.deepEqual(
+          mockGameState.foundations.foundation1,
+          [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation2,
+          [
+            { rank: RANK.RANK_2, suit: SUIT.CLUB },
+            { rank: RANK.RANK_A, suit: SUIT.CLUB },
+          ]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation3,
+          []
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation4,
+          []
+        );
+        assert.equal(mockGameState.waste.length, 2);
+        assert.equal(stub.calledOnce, false);
+        stub.restore();
+      });
     });
   });
 });
