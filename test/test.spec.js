@@ -257,6 +257,49 @@ describe('Helper Function Tests', () => {
         assert.equal(stub.calledOnce, false);
         stub.restore();
       });
+      it('should not allow a non-sequential card to be moved from the waste to a foundation\n\t  and should issue a warning instead', () => {
+        let stub = sinon.stub(console, 'warn');
+        let mockGameState = {
+          foundations: {
+            foundation1: [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }],
+            foundation2: [],
+            foundation3: [
+              { rank: RANK.RANK_2, suit: SUIT.HEART },
+              { rank: RANK.RANK_A, suit: SUIT.HEART }
+            ],
+            foundation4: [],
+          },
+          waste: [
+            { rank: RANK.RANK_5, suit: SUIT.HEART },
+            { rank: RANK.RANK_4, suit: SUIT.CLUB },
+            { rank: RANK.RANK_2, suit: SUIT.HEART },
+          ]
+        };
+
+        mockGameState = moveFromWasteToFoundation(mockGameState.waste, mockGameState.foundations);
+        assert.deepEqual(
+          mockGameState.foundations.foundation1,
+          [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation2,
+          [          ]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation3,
+          [
+            { rank: RANK.RANK_2, suit: SUIT.HEART },
+            { rank: RANK.RANK_A, suit: SUIT.HEART }
+          ]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation4,
+          []
+        );
+        assert.equal(mockGameState.waste.length, 3);
+        assert.equal(stub.calledOnce, true);
+        stub.restore();
+      });
     });
   });
 });

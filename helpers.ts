@@ -115,7 +115,8 @@ const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
   } else {
     /* if it's not an Ace, look for the pile that matches it's suit and check if it's sequential. if it is, add it to the top of the foundation (beginning of the array) */
     for (const index in foundations) {
-      if (isSameSuit(foundations[index][0], waste[0]) &&
+      if (foundations[index].length > 0 &&
+          isSameSuit(foundations[index][0], waste[0]) &&
           isInSequence(foundations[index][0], waste[0])) {
         foundations[index].unshift(waste.shift());
         break;
