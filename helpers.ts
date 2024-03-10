@@ -1,14 +1,6 @@
 // import chalk from 'chalk';
 import type { Card } from "./types"
-import { SUIT, RANK} from "./constants"
-
-// const paintCard = (card: Card) => {
-//   if (card.includes('♥') || card.includes('♦')) {
-//     return chalk.red(card);
-//   } else {
-//     return chalk.blackBright(card);
-//   }
-// }
+import { SUIT, RANK } from "./constants"
 
 const createCard = (rank: RANK, suit: SUIT) => {
   const newCard: Card = {
@@ -48,6 +40,33 @@ const canBePlacedOnFoundation = (parent: Card, child: Card) => (
   * The Deck *
 */
 
+const prepareToDisplayCard = (card: Card) => {
+  let displayReadyCard = ""
+  if (card.rank + 1 === 1) {
+    displayReadyCard += 'A';
+  } else if (card.rank + 1 === 11) {
+    displayReadyCard += 'J';
+  } else if (card.rank + 1 === 12) {
+    displayReadyCard += 'Q';
+  } else if (card.rank + 1 === 13) {
+    displayReadyCard += 'K';
+  } else {
+    displayReadyCard += `${card.rank + 1}`;
+  }
+
+  if (card.suit === SUIT.CLUB) {
+    displayReadyCard += '♣';
+  } else if (card.suit === SUIT.DIAMOND) {
+    displayReadyCard += '♦';
+  } else if (card.suit === SUIT.HEART) {
+    displayReadyCard += '♥';
+  } else {
+    displayReadyCard += '♠';
+  }
+
+  return displayReadyCard;
+};
+
 const shuffleDeck = (deck: Card[]) => {
   let curr = deck.length;
   let randomIndex = 0;
@@ -71,7 +90,6 @@ const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
 };
 
 export =  {
-  // paintCard,
   createCard,
   isBlack,
   isRed,
@@ -80,6 +98,7 @@ export =  {
   isInSequence,
   canBePlacedOnBottom,
   canBePlacedOnFoundation,
+  prepareToDisplayCard,
   shuffleDeck,
   fromStockpileToWaste,
 }

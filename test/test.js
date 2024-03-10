@@ -10,6 +10,8 @@ const { createCard,
   canBePlacedOnBottom,
   canBePlacedOnFoundation,
   shuffleDeck,
+  fromStockpileToWaste,
+  prepareToDisplayCard,
 } = require("../helpers.ts");
 
 describe('Helper Function Tests', () => {
@@ -132,9 +134,21 @@ describe('Helper Function Tests', () => {
       { rank: RANK.RANK_10, suit: SUIT.HEART },
     ];
 
+    it('should prepare the deck for display', () => {
+      const referenceDeck = ['10♣', '7♦', 'A♠', '3♣', '10♥'];
+      const displayReadyDeck = [];
+      deck.forEach((card, i) => displayReadyDeck[i] = prepareToDisplayCard(card));
+      assert.deepEqual(referenceDeck, displayReadyDeck);
+    });
     it('should shuffle the deck', () => {
       const rearrangedDeck = shuffleDeck(deck);
       assert.notDeepEqual(rearrangedDeck, deck);
     });
-  })
+    it('should move a card from the stockpile to the waste', () => {
+      const waste = [];
+      const cardToMove = deck[0];
+      fromStockpileToWaste(deck, waste);
+      assert.equal(waste[0], cardToMove);
+    });
+  });
 });
