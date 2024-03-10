@@ -84,6 +84,10 @@ const shuffleDeck = (deck: Card[]) => {
   return rearrangedDeck;
 };
 
+/*
+  * Stockpile & Waste *
+*/
+
 const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
   waste.push(stockpile.shift());
 };

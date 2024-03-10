@@ -126,6 +126,35 @@ describe('Helper Function Tests', () => {
     });
   });
 
+  describe('Stockpile & Waste', () => {
+    const deck = [
+      { rank: RANK.RANK_10, suit: SUIT.CLUB },
+      { rank: RANK.RANK_7, suit: SUIT.DIAMOND },
+      { rank: RANK.RANK_A, suit: SUIT.SPADE },
+      { rank: RANK.RANK_3, suit: SUIT.CLUB },
+      { rank: RANK.RANK_10, suit: SUIT.HEART },
+    ];
+
+    it('should move a card from the stockpile to the waste', () => {
+      const waste = [];
+      const cardToMove = deck[0];
+      fromStockpileToWaste(deck, waste);
+      assert.equal(waste[0], cardToMove);
+    });
+    it ('should refill the stockpile to be the same order it was before and make sure the waste is empty', () => {
+      let mockGameState = {
+        stockpile: deck.slice(),
+        waste: [],
+      };
+      while (mockGameState.stockpile.length) {
+        fromStockpileToWaste(mockGameState.stockpile, mockGameState.waste);
+      }
+      mockGameState = refillStockpile(mockGameState.stockpile, mockGameState.waste);
+      assert.deepEqual(mockGameState.stockpile, deck);
+      assert.deepEqual(mockGameState.waste, []);
+    });
+  });
+
   describe('Deck Helpers Tests', () => {
     const deck = [
       { rank: RANK.RANK_10, suit: SUIT.CLUB },
@@ -144,24 +173,6 @@ describe('Helper Function Tests', () => {
     it('should shuffle the deck', () => {
       const rearrangedDeck = shuffleDeck(deck);
       assert.notDeepEqual(rearrangedDeck, deck);
-    });
-    it('should move a card from the stockpile to the waste', () => {
-      const waste = [];
-      const cardToMove = deck[0];
-      fromStockpileToWaste(deck, waste);
-      assert.equal(waste[0], cardToMove);
-    });
-    it ('should refill the stockpile to be the same order it was before and make sure the waste is empty', () => {
-      let mockGameState = {
-        stockpile: deck.slice(),
-        waste: [],
-      };
-      while (mockGameState.stockpile.length) {
-        fromStockpileToWaste(mockGameState.stockpile, mockGameState.waste);
-      }
-      mockGameState = refillStockpile(mockGameState.stockpile, mockGameState.waste);
-      assert.deepEqual(mockGameState.stockpile, deck);
-      assert.deepEqual(mockGameState.waste, []);
     });
   });
 });
