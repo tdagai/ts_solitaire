@@ -1,5 +1,5 @@
 // import chalk from 'chalk';
-import type { Card } from "./types"
+import type { Card, Foundations } from "./types"
 import { SUIT, RANK } from "./constants"
 
 const createCard = (rank: RANK, suit: SUIT) => {
@@ -89,18 +89,45 @@ const shuffleDeck = (deck: Card[]) => {
 */
 
 const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
-  waste.push(stockpile.shift());
+  waste.unshift(stockpile.shift());
 };
 
 const refillStockpile = (stockpile: Card[], waste: Card[]) => {
   if (stockpile.length === 0 && waste.length !== 0) {
-    stockpile = waste;
+    stockpile = waste.reverse();
     waste = ([] as Card[]);
   }
   return { stockpile, waste };
 };
 
-export =  {
+const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
+  const cardToMove = waste[0];
+  if (waste[0].rank === RANK.RANK_A) {
+    for (const index in foundations) {
+      if (foundations[index].length === 0) {
+        foundations[index].push(waste.shift());
+        break;
+      }
+    }
+  } else {
+    for (const index in foundations) {
+      const foundationSize = foundations[index].length;
+      if (isSameSuit(foundations[index][0], waste[0]) &&
+          isInSequence(foundations[index][foundationSize - 1], waste[0])) {
+        foundations[index].push(waste.shift());
+        break;
+      }
+    }
+  }
+
+  if (cardToMove === waste[0]) {
+    console.log('That was not a valid move. Please try again.');
+  }
+
+  return { waste, foundations };
+};
+
+export = {
   createCard,
   isBlack,
   isRed,
@@ -113,4 +140,5 @@ export =  {
   shuffleDeck,
   fromStockpileToWaste,
   refillStockpile,
+  moveFromWasteToFoundation,
 }

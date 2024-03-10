@@ -3,7 +3,14 @@ import { RANK, SUIT } from './constants';
 type Card = {
   rank: RANK;
   suit: SUIT;
-}
+};
+
+type Foundations = {
+  foundation1: Card[];
+  foundation2: Card[];
+  foundation3: Card[];
+  foundation4: Card[];
+};
 
 type Node = {
   prev: Node | null;
@@ -11,7 +18,8 @@ type Node = {
   data: string; //This may change later, most likely to { card, position }
 };
 
-export {
+export type {
   Card,
   Node,
+  Foundations,
 }

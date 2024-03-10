@@ -13,6 +13,7 @@ const { createCard,
   fromStockpileToWaste,
   prepareToDisplayCard,
   refillStockpile,
+  moveFromWasteToFoundation,
 } = require("../helpers.ts");
 
 describe('Helper Function Tests', () => {
@@ -126,35 +127,6 @@ describe('Helper Function Tests', () => {
     });
   });
 
-  describe('Stockpile & Waste', () => {
-    const deck = [
-      { rank: RANK.RANK_10, suit: SUIT.CLUB },
-      { rank: RANK.RANK_7, suit: SUIT.DIAMOND },
-      { rank: RANK.RANK_A, suit: SUIT.SPADE },
-      { rank: RANK.RANK_3, suit: SUIT.CLUB },
-      { rank: RANK.RANK_10, suit: SUIT.HEART },
-    ];
-
-    it('should move a card from the stockpile to the waste', () => {
-      const waste = [];
-      const cardToMove = deck[0];
-      fromStockpileToWaste(deck, waste);
-      assert.equal(waste[0], cardToMove);
-    });
-    it ('should refill the stockpile to be the same order it was before and make sure the waste is empty', () => {
-      let mockGameState = {
-        stockpile: deck.slice(),
-        waste: [],
-      };
-      while (mockGameState.stockpile.length) {
-        fromStockpileToWaste(mockGameState.stockpile, mockGameState.waste);
-      }
-      mockGameState = refillStockpile(mockGameState.stockpile, mockGameState.waste);
-      assert.deepEqual(mockGameState.stockpile, deck);
-      assert.deepEqual(mockGameState.waste, []);
-    });
-  });
-
   describe('Deck Helpers Tests', () => {
     const deck = [
       { rank: RANK.RANK_10, suit: SUIT.CLUB },
@@ -173,6 +145,62 @@ describe('Helper Function Tests', () => {
     it('should shuffle the deck', () => {
       const rearrangedDeck = shuffleDeck(deck);
       assert.notDeepEqual(rearrangedDeck, deck);
+    });
+  });
+
+  describe('Game Functions', () => {
+    const referenceDeck = [
+      { rank: RANK.RANK_10, suit: SUIT.CLUB },
+      { rank: RANK.RANK_7, suit: SUIT.DIAMOND },
+      { rank: RANK.RANK_A, suit: SUIT.SPADE },
+      { rank: RANK.RANK_3, suit: SUIT.CLUB },
+      { rank: RANK.RANK_10, suit: SUIT.HEART },
+    ];
+
+    it('should move a card from the stockpile to the waste', () => {
+      const testDeck = referenceDeck.slice();
+      const waste = [];
+      // const cardToMove = referenceDeck[0];
+      for (let i = 0; i < referenceDeck.length; i++) {
+        fromStockpileToWaste(testDeck, waste);
+      }
+      assert.deepEqual(waste, referenceDeck.reverse());
+    });
+    it('should refill the stockpile to be the same order it was before and make sure the waste is empty', () => {
+      let mockGameState = {
+        stockpile: referenceDeck.slice(),
+        waste: [],
+      };
+      while (mockGameState.stockpile.length) {
+        fromStockpileToWaste(mockGameState.stockpile, mockGameState.waste);
+      }
+      mockGameState = refillStockpile(mockGameState.stockpile, mockGameState.waste);
+      assert.deepEqual(mockGameState.stockpile, referenceDeck);
+      assert.deepEqual(mockGameState.waste, []);
+    });
+
+
+    it('should move an Ace from the waste to the first available foundation', () => {
+      let mockGameState = {
+        foundations: {
+          foundation1: [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }],
+          foundation2: [{ rank: RANK.RANK_A, suit: SUIT.CLUB }],
+          foundation3: [],
+          foundation4: [],
+        },
+        waste: [
+          { rank: RANK.RANK_A, suit: SUIT.SPADE },
+          { rank: RANK.RANK_4, suit: SUIT.CLUB },
+          { rank: RANK.RANK_2, suit: SUIT.HEART },
+        ]
+      };
+
+      mockGameState = moveFromWasteToFoundation(mockGameState.waste, mockGameState.foundations);
+      assert.deepEqual(
+        mockGameState.foundations.foundation3,
+        [{ rank: RANK.RANK_A, suit: SUIT.SPADE }]
+      );
+      assert.equal(mockGameState.waste.length, 2);
     });
   });
 });
