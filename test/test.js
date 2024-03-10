@@ -9,6 +9,7 @@ const { createCard,
   isInSequence,
   canBePlacedOnBottom,
   canBePlacedOnFoundation,
+  shuffleDeck,
 } = require("../helpers.ts");
 
 describe('Helper Function Tests', () => {
@@ -121,4 +122,19 @@ describe('Helper Function Tests', () => {
       assert.notEqual(canBePlacedOnFoundation(c7s, c4s), true);
     });
   });
+
+  describe('Deck Helpers Tests', () => {
+    const deck = [
+      { rank: RANK.RANK_10, suit: SUIT.CLUB },
+      { rank: RANK.RANK_7, suit: SUIT.DIAMOND },
+      { rank: RANK.RANK_A, suit: SUIT.SPADE },
+      { rank: RANK.RANK_3, suit: SUIT.CLUB },
+      { rank: RANK.RANK_10, suit: SUIT.HEART },
+    ];
+
+    it('should shuffle the deck', () => {
+      const rearrangedDeck = shuffleDeck(deck);
+      assert.notDeepEqual(rearrangedDeck, deck);
+    });
+  })
 });
