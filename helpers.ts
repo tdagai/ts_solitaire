@@ -86,6 +86,13 @@ const shuffleDeck = (deck: Card[]) => {
 
 const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
   waste.push(stockpile.shift());
+};
+
+const refillStockpile = (stockpile: Card[], waste: Card[]) => {
+  if (stockpile.length === 0 && waste.length !== 0) {
+    stockpile = waste;
+    waste = ([] as Card[]);
+  }
   return { stockpile, waste };
 };
 
@@ -101,4 +108,5 @@ export =  {
   prepareToDisplayCard,
   shuffleDeck,
   fromStockpileToWaste,
+  refillStockpile,
 }

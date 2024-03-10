@@ -12,6 +12,7 @@ const { createCard,
   shuffleDeck,
   fromStockpileToWaste,
   prepareToDisplayCard,
+  refillStockpile,
 } = require("../helpers.ts");
 
 describe('Helper Function Tests', () => {
@@ -149,6 +150,18 @@ describe('Helper Function Tests', () => {
       const cardToMove = deck[0];
       fromStockpileToWaste(deck, waste);
       assert.equal(waste[0], cardToMove);
+    });
+    it ('should refill the stockpile to be the same order it was before and make sure the waste is empty', () => {
+      let mockGameState = {
+        stockpile: deck.slice(),
+        waste: [],
+      };
+      while (mockGameState.stockpile.length) {
+        fromStockpileToWaste(mockGameState.stockpile, mockGameState.waste);
+      }
+      mockGameState = refillStockpile(mockGameState.stockpile, mockGameState.waste);
+      assert.deepEqual(mockGameState.stockpile, deck);
+      assert.deepEqual(mockGameState.waste, []);
     });
   });
 });
