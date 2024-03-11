@@ -1,5 +1,3 @@
-import type { Card } from './types';
-
 enum RANK {
   RANK_A,
   RANK_2,
@@ -28,6 +26,10 @@ const colors = {
   black: '\x1b[30m'
 }
 
+const errors = {
+  invalidMove: Error('That was not a valid move.'),
+};
+
 // const originalDeck: Card[] = [
 //   'A♥', 'A♦', 'A♣', 'A♠',
 //   '2♥', '2♦', '2♣', '2♠',
@@ -49,4 +51,5 @@ export {
   RANK,
   SUIT,
   colors,
+  errors,
 }

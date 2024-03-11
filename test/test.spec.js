@@ -283,7 +283,7 @@ describe('Helper Function Tests', () => {
         );
         assert.deepEqual(
           mockGameState.foundations.foundation2,
-          [          ]
+          []
         );
         assert.deepEqual(
           mockGameState.foundations.foundation3,
@@ -297,6 +297,45 @@ describe('Helper Function Tests', () => {
           []
         );
         assert.equal(mockGameState.waste.length, 3);
+        assert.equal(stub.calledOnce, true);
+        stub.restore();
+      });
+      it('should throw a warning if the user tries to move a card from an empty wastes', () => {
+        let stub = sinon.stub(console, 'warn');
+        let mockGameState = {
+          foundations: {
+            foundation1: [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }],
+            foundation2: [],
+            foundation3: [
+              { rank: RANK.RANK_2, suit: SUIT.HEART },
+              { rank: RANK.RANK_A, suit: SUIT.HEART }
+            ],
+            foundation4: [],
+          },
+          waste: []
+        };
+
+        mockGameState = moveFromWasteToFoundation(mockGameState.waste, mockGameState.foundations);
+        assert.deepEqual(
+          mockGameState.foundations.foundation1,
+          [{ rank: RANK.RANK_A, suit: SUIT.DIAMOND }]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation2,
+          []
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation3,
+          [
+            { rank: RANK.RANK_2, suit: SUIT.HEART },
+            { rank: RANK.RANK_A, suit: SUIT.HEART }
+          ]
+        );
+        assert.deepEqual(
+          mockGameState.foundations.foundation4,
+          []
+        );
+        assert.equal(mockGameState.waste.length, 0);
         assert.equal(stub.calledOnce, true);
         stub.restore();
       });

@@ -1,4 +1,4 @@
-import { RANK, SUIT } from './constants';
+import { RANK, SUIT } from '../constants';
 
 type Card = {
   rank: RANK;

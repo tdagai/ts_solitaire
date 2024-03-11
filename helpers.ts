@@ -1,6 +1,7 @@
 // import chalk from 'chalk';
-import type { Card, Foundations } from "./types"
-import { SUIT, RANK } from "./constants"
+import type { Card, Foundations } from "./types/types"
+import { SUIT, RANK, errors } from "./constants"
+import { yellow } from "chalk";
 
 const createCard = (rank: RANK, suit: SUIT) => {
   const newCard: Card = {
@@ -88,10 +89,18 @@ const shuffleDeck = (deck: Card[]) => {
   * Stockpile & Waste *
 */
 
+/*
+  moves a card from the top of the stockpile
+  to the top of the waste (beginning of array)
+*/
 const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
   waste.unshift(stockpile.shift());
 };
 
+/*
+  Reverses the waste and moves it into the stockpile,
+  then empties the waste.
+*/
 const refillStockpile = (stockpile: Card[], waste: Card[]) => {
   if (stockpile.length === 0 && waste.length !== 0) {
     stockpile = waste.reverse();
@@ -101,38 +110,46 @@ const refillStockpile = (stockpile: Card[], waste: Card[]) => {
 };
 
 const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
-  /* save the first card in the waste to compare at the end */
-  const cardToMove = waste[0];
+  try {
+    /* if the waste is empty, throw a warning and return the params as-is */
+    if (waste.length === 0) {
+      throw errors.invalidMove;
+    }
+    /* save the first card in the waste to compare at the end */
+    const cardToMove = waste[0];
 
-  /* if the card is an Ace, look for the first empty foudnation to put it in */
-  if (waste[0].rank === RANK.RANK_A) {
-    for (const index in foundations) {
-      if (foundations[index].length === 0) {
-        foundations[index].push(waste.shift());
-        break;
+    /* if the card is an Ace, look for the first empty foudnation to put it in */
+    if (waste[0].rank === RANK.RANK_A) {
+      for (const index in foundations) {
+        if (foundations[index].length === 0) {
+          foundations[index].push(waste.shift());
+          break;
+        }
+      }
+    } else {
+      /* if it's not an Ace, look for the foundation that matches it's suit and check if it's sequential. if it is, add it to the top of the foundation (beginning of the array) */
+      for (const index in foundations) {
+        if (foundations[index].length > 0 &&
+            isSameSuit(foundations[index][0], waste[0]) &&
+            isInSequence(foundations[index][0], waste[0])) {
+          foundations[index].unshift(waste.shift());
+          break;
+        }
       }
     }
-  } else {
-    /* if it's not an Ace, look for the pile that matches it's suit and check if it's sequential. if it is, add it to the top of the foundation (beginning of the array) */
-    for (const index in foundations) {
-      if (foundations[index].length > 0 &&
-          isSameSuit(foundations[index][0], waste[0]) &&
-          isInSequence(foundations[index][0], waste[0])) {
-        foundations[index].unshift(waste.shift());
-        break;
-      }
+
+    /* if card at the top of the waste pile is the same as it was before that means the card was not valid to move, so send a warning */
+    if (cardToMove === waste[0]) {
+      throw errors.invalidMove;
     }
-  }
 
-  /* if card at the top of the waste pile is the same as it was before that means the card was not valid to move, so send a warning */
-  if (cardToMove === waste[0]) {
-    console.warn('That was not a valid move.');
+  } catch (error) {
+    console.warn(yellow(error.message));
   }
-
   return { waste, foundations };
 };
 
-export = {
+export {
   createCard,
   isBlack,
   isRed,
