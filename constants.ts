@@ -12,13 +12,15 @@ enum RANK {
   RANK_J,
   RANK_Q,
   RANK_K,
+  RANK_COUNT,
 };
 
 enum SUIT {
   HEART,
   DIAMOND,
   CLUB,
-  SPADE
+  SPADE,
+  SUIT_COUNT,
 };
 
 const colors = {

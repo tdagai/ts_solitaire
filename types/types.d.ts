@@ -3,6 +3,7 @@ import { RANK, SUIT } from '../constants';
 type Card = {
   rank: RANK;
   suit: SUIT;
+  isVisible: boolean;
 };
 
 type Foundations = {

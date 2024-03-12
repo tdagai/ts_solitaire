@@ -3,10 +3,11 @@ import type { Card, Foundations } from "./types/types"
 import { SUIT, RANK, errors } from "./constants"
 import { yellow } from "chalk";
 
-const createCard = (rank: RANK, suit: SUIT) => {
+const createCard = (rank: RANK, suit: SUIT, isVisible: boolean) => {
   const newCard: Card = {
     rank,
-    suit
+    suit,
+    isVisible,
   };
   return newCard;
 };
@@ -15,9 +16,9 @@ const createCard = (rank: RANK, suit: SUIT) => {
   * Suits & Ranks *
 */
 
-const isBlack = (card: Card) => card.suit === SUIT.CLUB || card.suit === SUIT.SPADE;
+const isBlack = ({ suit }: Card) => suit === SUIT.CLUB || suit === SUIT.SPADE;
 
-const isRed = (card: Card) => card.suit === SUIT.HEART || card.suit === SUIT.DIAMOND;
+const isRed = ({ suit }: Card) => suit === SUIT.HEART || suit === SUIT.DIAMOND;
 
 const isSameSuit = (first: Card, second: Card) => first.suit === second.suit;
 
@@ -41,25 +42,25 @@ const canBePlacedOnFoundation = (parent: Card, child: Card) => (
   * The Deck *
 */
 
-const prepareToDisplayCard = (card: Card) => {
+const prepareToDisplayCard = ({ rank, suit }: Card) => {
   let displayReadyCard = ""
-  if (card.rank + 1 === 1) {
+  if (rank + 1 === 1) {
     displayReadyCard += 'A';
-  } else if (card.rank + 1 === 11) {
+  } else if (rank + 1 === 11) {
     displayReadyCard += 'J';
-  } else if (card.rank + 1 === 12) {
+  } else if (rank + 1 === 12) {
     displayReadyCard += 'Q';
-  } else if (card.rank + 1 === 13) {
+  } else if (rank + 1 === 13) {
     displayReadyCard += 'K';
   } else {
-    displayReadyCard += `${card.rank + 1}`;
+    displayReadyCard += `${rank + 1}`;
   }
 
-  if (card.suit === SUIT.CLUB) {
+  if (suit === SUIT.CLUB) {
     displayReadyCard += '♣';
-  } else if (card.suit === SUIT.DIAMOND) {
+  } else if (suit === SUIT.DIAMOND) {
     displayReadyCard += '♦';
-  } else if (card.suit === SUIT.HEART) {
+  } else if (suit === SUIT.HEART) {
     displayReadyCard += '♥';
   } else {
     displayReadyCard += '♠';
@@ -67,6 +68,18 @@ const prepareToDisplayCard = (card: Card) => {
 
   return displayReadyCard;
 };
+
+const generateDeck = () => {
+  const deck = ([] as Card[]);
+
+  for(let rank = 0; rank < RANK.RANK_COUNT; rank++) {
+    for (let suit = 0; suit < SUIT.SUIT_COUNT; suit++) {
+      deck.push(createCard(rank, suit, false));
+    }
+  }
+
+  return deck;
+}
 
 const shuffleDeck = (deck: Card[]) => {
   let curr = deck.length;
@@ -138,7 +151,7 @@ const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
       }
     }
 
-    /* if card at the top of the waste pile is the same as it was before that means the card was not valid to move, so send a warning */
+    /* if card at the top of the waste pile is the same as it was before that means this was not valid to move, so throw a warning */
     if (cardToMove === waste[0]) {
       throw errors.invalidMove;
     }
@@ -148,6 +161,38 @@ const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
   }
   return { waste, foundations };
 };
+
+const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
+  try {
+    /* if the waste is empty, throw a warning and return the params as-is */
+    if (waste.length === 0) {
+      throw errors.invalidMove;
+    }
+    /* save the first card in the waste to compare at the end */
+    const cardToMove = waste[0];
+
+    /* if the pile is empty or the card at the top
+    of the waste is the card at the top of the pile
+    alternate colors and are sequential, move the
+    card Waste -> Pile */
+    if (pile.length === 0 ||
+        (isInSequence(waste[0], pile[0]) &&
+        isAlternateColor(waste[0], pile[0]))) {
+      pile.push(waste.shift());
+    }
+
+    /* if card at the top of the waste pile is the
+    same as it was before that means this was not
+    valid to move, so throw a warning */
+    if (cardToMove === waste[0]) {
+      throw errors.invalidMove;
+    }
+
+  } catch (error) {
+    console.warn(yellow(error.message));
+  }
+  return { waste, pile };
+}
 
 export {
   createCard,
@@ -159,8 +204,10 @@ export {
   canBePlacedOnBottom,
   canBePlacedOnFoundation,
   prepareToDisplayCard,
+  generateDeck,
   shuffleDeck,
   fromStockpileToWaste,
   refillStockpile,
   moveFromWasteToFoundation,
+  moveFromWasteToPile,
 }
