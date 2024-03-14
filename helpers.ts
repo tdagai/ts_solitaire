@@ -108,6 +108,7 @@ const shuffleDeck = (deck: Card[]) => {
 */
 const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
   waste.unshift(stockpile.shift());
+  waste[0].isVisible = true;
 };
 
 /*
@@ -117,6 +118,7 @@ const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
 const refillStockpile = (stockpile: Card[], waste: Card[]) => {
   if (stockpile.length === 0 && waste.length !== 0) {
     stockpile = waste.reverse();
+    stockpile = stockpile.map((card: Card) => {card.isVisible = false; return card; })
     waste = ([] as Card[]);
   }
   return { stockpile, waste };

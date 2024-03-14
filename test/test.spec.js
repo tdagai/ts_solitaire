@@ -151,11 +151,11 @@ describe('Helper Function Tests', () => {
 
   describe('Game Functions', () => {
     const referenceDeck = [
-      { rank: RANK.RANK_10, suit: SUIT.CLUB },
-      { rank: RANK.RANK_7, suit: SUIT.DIAMOND },
-      { rank: RANK.RANK_A, suit: SUIT.SPADE },
-      { rank: RANK.RANK_3, suit: SUIT.CLUB },
-      { rank: RANK.RANK_10, suit: SUIT.HEART },
+      { rank: RANK.RANK_10, suit: SUIT.CLUB, isVisible: false },
+      { rank: RANK.RANK_7, suit: SUIT.DIAMOND, isVisible: false },
+      { rank: RANK.RANK_A, suit: SUIT.SPADE, isVisible: false },
+      { rank: RANK.RANK_3, suit: SUIT.CLUB, isVisible: false },
+      { rank: RANK.RANK_10, suit: SUIT.HEART, isVisible: false },
     ];
 
     it('should move a card from the stockpile to the waste', () => {
@@ -165,6 +165,7 @@ describe('Helper Function Tests', () => {
         fromStockpileToWaste(testDeck, waste);
       }
       assert.deepEqual(waste, referenceDeck.reverse());
+      assert.ok(waste[0].isVisible)
     });
     it('should refill the stockpile to be the same order it was before and make sure the waste is empty', () => {
       let mockGameState = {
@@ -177,6 +178,7 @@ describe('Helper Function Tests', () => {
       mockGameState = refillStockpile(mockGameState.stockpile, mockGameState.waste);
       assert.deepEqual(mockGameState.stockpile, referenceDeck);
       assert.deepEqual(mockGameState.waste, []);
+      assert.equal(mockGameState.stockpile[0].isVisible, false);
     });
 
     describe('moveFromWasteToFoundation', () => {
