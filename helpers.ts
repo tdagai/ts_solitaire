@@ -1,7 +1,20 @@
 // import chalk from 'chalk';
+const readline = require('readline');
+const { stdin: input, stdout: output } = require('process');
 import type { Card, Foundations } from "./types/types"
 import { SUIT, RANK, errors } from "./constants"
 import { yellow } from "chalk";
+
+/*
+  * User Input *
+*/
+const rl = readline.createInterface({
+  input,
+  output,
+});
+
+const question = (answer: string) => new Promise(resolve => rl.question(answer, resolve));
+
 
 const createCard = (rank: RANK, suit: SUIT, isVisible: boolean) => {
   const newCard: Card = {
@@ -202,11 +215,41 @@ const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
   return { waste, pile };
 };
 
-// const moveFromPileToFoundation = (pile: Card[], ) => {
+const initiateGame = () => {
+  const shuffledDeck = shuffleDeck(generateDeck());
+  const piles = [
+    [] as Card[],
+    [] as Card[],
+    [] as Card[],
+    [] as Card[],
+    [] as Card[],
+    [] as Card[],
+    [] as Card[],
+  ];
 
-// }
+  for (let i = 0; i < piles.length; i++) {
+    for (let f = 0; f < i + 1; f++) {
+      piles[i].unshift(shuffledDeck.shift());
+      if (f === i) { piles[i][0].isVisible = true; }
+    }
+  }
+
+  return {
+    stockpile: shuffledDeck,
+    waste: [] as Card[],
+    foundations: {
+      f1: [] as Card[],
+      f2: [] as Card[],
+      f3: [] as Card[],
+      f4: [] as Card[],
+    },
+    piles,
+  };
+}
 
 export {
+  rl,
+  question,
   createCard,
   isBlack,
   isRed,
@@ -222,4 +265,5 @@ export {
   refillStockpile,
   moveToFoundation,
   moveFromWasteToPile,
+  initiateGame,
 }
