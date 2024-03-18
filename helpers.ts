@@ -124,44 +124,50 @@ const refillStockpile = (stockpile: Card[], waste: Card[]) => {
   return { stockpile, waste };
 };
 
-const moveFromWasteToFoundation = (waste: Card[], foundations: Foundations) => {
+const moveToFoundation = (cardPile: Card[], foundations: Foundations) => {
   try {
-    /* if the waste is empty, throw a warning and return the params as-is */
-    if (waste.length === 0) {
+    /* if the card pile is empty, throw a warning and return the params as-is */
+    if (cardPile.length === 0) {
       throw errors.invalidMove;
     }
-    /* save the first card in the waste to compare at the end */
-    const cardToMove = waste[0];
+    /* save the first card in the card pile to compare at the end */
+    const cardToMove = cardPile[0];
 
     /* if the card is an Ace, look for the first empty foudnation to put it in */
-    if (waste[0].rank === RANK.RANK_A) {
-      for (const index in foundations) {
-        if (foundations[index].length === 0) {
-          foundations[index].push(waste.shift());
+    if (cardPile[0].rank === RANK.RANK_A) {
+      for (const f in foundations) {
+        if (foundations[f].length === 0) {
+          foundations[f].push(cardPile.shift());
+          if (cardPile.length) { cardPile[0].isVisible = true; }
           break;
         }
       }
     } else {
-      /* if it's not an Ace, look for the foundation that matches it's suit and check if it's sequential. if it is, add it to the top of the foundation (beginning of the array) */
-      for (const index in foundations) {
-        if (foundations[index].length > 0 &&
-            isSameSuit(foundations[index][0], waste[0]) &&
-            isInSequence(foundations[index][0], waste[0])) {
-          foundations[index].unshift(waste.shift());
+      /* if it's not an Ace, look for the foundation that
+      matches it's suit and check if it's sequential. if
+      it is, move it from the the pile to the top of the
+      foundation (beginning of the array) */
+      for (const f in foundations) {
+        if (foundations[f].length > 0 &&
+            isSameSuit(foundations[f][0], cardPile[0]) &&
+            isInSequence(foundations[f][0], cardPile[0])) {
+          foundations[f].unshift(cardPile.shift());
+          if (cardPile.length) { cardPile[0].isVisible = true; }
           break;
         }
       }
     }
 
-    /* if card at the top of the waste pile is the same as it was before that means this was not valid to move, so throw a warning */
-    if (cardToMove === waste[0]) {
+    /* if card at the top of the card pile is the same as it was
+    before that means this was not valid to move, so throw a warning */
+    if (cardPile.length && cardToMove === cardPile[0]) {
       throw errors.invalidMove;
     }
 
   } catch (error) {
     console.warn(yellow(error.message));
   }
-  return { waste, foundations };
+  return { cardPile, foundations };
 };
 
 const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
@@ -194,7 +200,11 @@ const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
     console.warn(yellow(error.message));
   }
   return { waste, pile };
-}
+};
+
+// const moveFromPileToFoundation = (pile: Card[], ) => {
+
+// }
 
 export {
   createCard,
@@ -210,6 +220,6 @@ export {
   shuffleDeck,
   fromStockpileToWaste,
   refillStockpile,
-  moveFromWasteToFoundation,
+  moveToFoundation,
   moveFromWasteToPile,
 }
