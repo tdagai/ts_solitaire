@@ -13,14 +13,20 @@ type Foundations = {
   foundation4: Card[];
 };
 
-type Node = {
-  prev: Node | null;
-  next: Node | null;
-  data: string; //This may change later, most likely to { card, position }
-};
+type GameState = {
+  stockpile: Card[];
+  waste: Card[];
+  foundations: {
+    f1: Card[];
+    f2: Card[];
+    f3: Card[];
+    f4: Card[];
+  };
+  piles: Card[][];
+}
 
 export type {
   Card,
-  Node,
   Foundations,
+  GameState,
 }

@@ -1,7 +1,7 @@
 // import chalk from 'chalk';
 const readline = require('readline');
 const { stdin: input, stdout: output } = require('process');
-import type { Card, Foundations } from "./types/types"
+import type { Card, Foundations, GameState } from "./types/types"
 import { SUIT, RANK, errors } from "./constants"
 import { yellow } from "chalk";
 
@@ -55,28 +55,55 @@ const canBePlacedOnFoundation = (parent: Card, child: Card) => (
   * The Deck *
 */
 
-const prepareToDisplayCard = ({ rank, suit }: Card) => {
+const prepareToDisplayCard = (card: Card | undefined) => {
   let displayReadyCard = ""
-  if (rank + 1 === 1) {
-    displayReadyCard += 'A';
-  } else if (rank + 1 === 11) {
-    displayReadyCard += 'J';
-  } else if (rank + 1 === 12) {
-    displayReadyCard += 'Q';
-  } else if (rank + 1 === 13) {
-    displayReadyCard += 'K';
-  } else {
-    displayReadyCard += `${rank + 1}`;
+
+  if (!card) {
+    return displayReadyCard;
   }
 
-  if (suit === SUIT.CLUB) {
-    displayReadyCard += '♣';
-  } else if (suit === SUIT.DIAMOND) {
-    displayReadyCard += '♦';
-  } else if (suit === SUIT.HEART) {
-    displayReadyCard += '♥';
-  } else {
-    displayReadyCard += '♠';
+  if (!card.isVisible) {
+    return "[]";
+  }
+  switch (card.rank) {
+    case RANK.RANK_A: {
+      displayReadyCard += 'A';
+      break;
+    }
+    case RANK.RANK_J: {
+      displayReadyCard += 'J';
+      break;
+    }
+    case RANK.RANK_Q: {
+      displayReadyCard += 'Q';
+      break;
+    }
+    case RANK.RANK_K: {
+      displayReadyCard += 'K';
+      break;
+    }
+    default: {
+      displayReadyCard += `${card.rank + 1}`
+    }
+  }
+
+  switch (card.suit) {
+    case SUIT.CLUB: {
+      displayReadyCard += '♣';
+      break;
+    }
+    case SUIT.DIAMOND: {
+      displayReadyCard += '♦';
+      break;
+    }
+    case SUIT.HEART: {
+      displayReadyCard += '♥';
+      break;
+    }
+    default: {
+      displayReadyCard += '♠';
+      break;
+    }
   }
 
   return displayReadyCard;
@@ -229,12 +256,12 @@ const initiateGame = () => {
 
   for (let i = 0; i < piles.length; i++) {
     for (let f = 0; f < i + 1; f++) {
-      piles[i].unshift(shuffledDeck.shift());
-      if (f === i) { piles[i][0].isVisible = true; }
+      piles[i].push(shuffledDeck.shift());
+      if (f === i) { piles[i][f].isVisible = true; }
     }
   }
 
-  return {
+  const gameState: GameState = {
     stockpile: shuffledDeck,
     waste: [] as Card[],
     foundations: {
@@ -245,7 +272,45 @@ const initiateGame = () => {
     },
     piles,
   };
-}
+
+  return gameState;
+};
+
+const displayBoard = ({ stockpile, waste, foundations, piles }:GameState) => {
+  const sotckpileCount = stockpile.length;
+  const { f1, f2, f3, f4 } = foundations;
+  const topOfStockPile = prepareToDisplayCard(waste[0]);
+  const topOfF1 = prepareToDisplayCard(f1[0]);
+  const topOfF2 = prepareToDisplayCard(f2[0]);
+  const topOfF3 = prepareToDisplayCard(f3[0]);
+  const topOfF4 = prepareToDisplayCard(f4[0]);
+  const maxPileSize = Math.max( piles[0].length,
+                                piles[1].length,
+                                piles[2].length,
+                                piles[3].length,
+                                piles[4].length,
+                                piles[5].length,
+                                piles[6].length);
+  let displayPiles = '';
+  for (let i = 0; i < maxPileSize; i++) {
+    let row = ``;
+    for (let currPile = 0; currPile < piles.length; currPile++) {
+      if (piles[currPile][i] && piles[currPile][i].isVisible) {
+        row += `[${prepareToDisplayCard(piles[currPile][i])}]\t`;
+       } else {
+        row += ` ${prepareToDisplayCard(piles[currPile][i])}\t`;
+      }
+    }
+    displayPiles += row + `\n`;
+  }
+
+
+  console.log('[Stockpile]\t[Waste]\t\t[Foundations]');
+  console.log(`[${sotckpileCount}]\t\t[${topOfStockPile}]\t\t[${topOfF1}] [${topOfF2}] [${topOfF3}] [${topOfF4}]`);
+  console.log('====================================================================');
+  console.log('Pile1\tPile2\tPile3\tPile4\tPile5\tPile6\tPile7');
+  console.log(displayPiles);
+};
 
 export {
   rl,
@@ -266,4 +331,5 @@ export {
   moveToFoundation,
   moveFromWasteToPile,
   initiateGame,
+  displayBoard,
 }

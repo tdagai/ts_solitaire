@@ -23,6 +23,27 @@ enum SUIT {
   SUIT_COUNT,
 };
 
+enum MOVES {
+  DRAW,
+  MOVE,
+};
+
+enum TARGETS {
+  STOCKPILE,
+  WASTE,
+  PILE1,
+  PILE2,
+  PILE3,
+  PILE4,
+  PILE5,
+  PILE6,
+  PILE7,
+  FOUNDATION1,
+  FOUNDATION2,
+  FOUNDATION3,
+  FOUNDATION4,
+};
+
 const colors = {
   red: '\x1b[31m',
   black: '\x1b[30m'
@@ -49,9 +70,10 @@ const errors = {
 // ];
 
 export {
-  // originalDeck,
   RANK,
   SUIT,
+  MOVES,
+  TARGETS,
   colors,
   errors,
 }
