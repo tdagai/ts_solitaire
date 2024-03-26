@@ -18,6 +18,7 @@ type GameState = {
   waste: Card[];
   foundations: Foundations;
   piles: Card[][];
+  warning: string;
 }
 
 export type {

@@ -1,5 +1,5 @@
 // import { inspect } from 'util';
-// import { yellow } from 'chalk';
+import { yellow } from 'chalk';
 import {
   rl,
   question,
@@ -24,6 +24,7 @@ const playGame = async () => {
   while (userAnswer !== 'q' && userAnswer !== 'quit') {
     console.clear();
     displayBoard(gameState);
+    if (gameState.warning.length) { console.log(yellow(gameState.warning)) }
     userAnswer = await question('What is your next move?\n - ');
 
     switch ((userAnswer as string).toLowerCase()) {
@@ -53,7 +54,10 @@ const playGame = async () => {
           if (isValidPile(destination)) {
             moveFromWasteToPile(gameState.waste, gameState.piles[Number(destination[1]) - 1]);
           } else if (destination === 'fo') {
-            fromWasteToFoundation(gameState.waste, gameState.foundations);
+            const newState = fromWasteToFoundation(gameState.waste, gameState.foundations);
+            gameState.waste = newState.waste;
+            gameState.foundations = newState.foundations;
+            gameState.warning = newState.warning;
           } else if (isValidFoundation(destination)) {
             fromWasteToFoundation(gameState.waste, gameState.foundations, destination);
           }

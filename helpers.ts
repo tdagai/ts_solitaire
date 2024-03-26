@@ -183,6 +183,7 @@ const isValidPile =
   (x: any): x is PileNames => validPiles.includes(x);
 
 const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?: FoundationNames) => {
+  let warning = '';
   try {
     /*
     * if the waste is empty, throw a warning and return the params as-is
@@ -248,9 +249,9 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
     }
 
   } catch (error) {
-    console.warn(yellow(error.message));
+    warning = error.message;
   }
-  return { waste, foundations };
+  return { waste, foundations, warning };
 };
 const fromPileToFoundation = (cardPile: Card[], foundations: Foundations) => {
   try {
@@ -401,6 +402,7 @@ const initiateGame = () => {
       f4: [] as Card[],
     } as Foundations,
     piles,
+    warning: '',
   };
 
   return gameState;
