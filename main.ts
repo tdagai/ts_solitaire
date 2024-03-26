@@ -1,5 +1,5 @@
 // import { inspect } from 'util';
-import { yellow } from 'chalk';
+// import { yellow } from 'chalk';
 import {
   rl,
   question,
@@ -9,6 +9,11 @@ import {
   refillStockpile,
   moveFromWasteToPile,
   fromWasteToFoundation,
+  fromPileToFoundation,
+  moveFromPileToPile,
+  isValidFoundation,
+  fromFoundationToPile,
+  isValidPile,
 } from './helpers';
 
 const playGame = async () => {
@@ -40,19 +45,38 @@ const playGame = async () => {
                                         '(comma separated, no spaces)\n'+
                                         '[wa] = waste\t'+
                                         '[p#] = pile #\t'+
-                                        '[fo] = foundation\n - ');
+                                        '[fo] = foundation\t'+
+                                        '[f#] = foundation #\n - ');
 
         const [target, destination] = (userMove as string).split(',');
-        console.log(target, destination);
         if (target === 'wa') {
-          if (destination[0] === 'p') {
-            console.log(gameState.piles[Number(destination[1]) - 1])
+          if (isValidPile(destination)) {
             moveFromWasteToPile(gameState.waste, gameState.piles[Number(destination[1]) - 1]);
           } else if (destination === 'fo') {
-            const newState = fromWasteToFoundation(gameState.waste, gameState.foundations);
-            gameState.waste = newState.waste;
-            gameState.foundations = newState.foundations;
+            fromWasteToFoundation(gameState.waste, gameState.foundations);
+          } else if (isValidFoundation(destination)) {
+            fromWasteToFoundation(gameState.waste, gameState.foundations, destination);
           }
+        } else if (isValidPile(target)) {
+          const targetPile = Number(target[1]) - 1;
+          if (destination === 'fo') {
+            const newState = fromPileToFoundation(gameState.piles[targetPile], gameState.foundations);
+
+            gameState.piles[targetPile] = newState.cardPile;
+            gameState.foundations = newState.foundations;
+          } else if (isValidPile(destination)) {
+            const destPile = Number(destination[1]) - 1;
+            const pileIndex = await question('what index would  you like to start at?\n - ');
+            const newState = moveFromPileToPile(gameState.piles[targetPile], (pileIndex as number), gameState.piles[destPile]);
+            gameState.piles[targetPile] = newState.target;
+            gameState.piles[destPile] = newState.destination;
+          }
+        } else if (isValidFoundation(target) && isValidPile(destination)) {
+          const newState = fromFoundationToPile(
+            gameState.foundations[target],
+            gameState.piles[Number(destination[1]) - 1]);
+          gameState.foundations[target] = newState.foundation;
+          gameState.piles[Number(destination[1]) - 1] = newState.pile;
         }
         break;
       }
