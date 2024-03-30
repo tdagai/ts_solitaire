@@ -51,6 +51,15 @@ const colors = {
 
 const errors = {
   invalidMove: Error('That was not a valid move.'),
+  invalidTarget: Error('That was not a valid target.'),
+  invalidDest: Error('That was not a valid destination.'),
+  invalidIndex: Error('That was not a valid index'),
+  suitNotMatching: Error('Suit does not match'),
+  notInSequence: Error('Cards are not in sequence'),
+  notAlternatingColor: Error('Can\'t move a card onto another card if they share a color'),
+  notVisibleError: Error('Can\'t move a card that has not been revealed yet'),
+  emptyFoundationError: Error('Can\'t move a card that\'s not an Ace onto an empty foundation'),
+  emptyWasteError: Error('Can\'t move from an empty waste'),
 };
 
 // const originalDeck: Card[] = [

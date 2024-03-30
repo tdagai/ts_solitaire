@@ -14,17 +14,26 @@ import {
   isValidFoundation,
   fromFoundationToPile,
   isValidPile,
+  isValidDestination,
+  isValidTarget,
 } from './helpers';
+import { errors } from './constants';
+import { Destinations, Targets } from './types/types';
 
 const playGame = async () => {
   let gameState = initiateGame();
   let userAnswer;
+  let target: Targets;
+  let destination: Destinations;
 
   console.log('Let\'s play Solitaire!');
   while (userAnswer !== 'q' && userAnswer !== 'quit') {
     console.clear();
     displayBoard(gameState);
-    if (gameState.warning.length) { console.log(yellow(gameState.warning)) }
+    if (gameState.warning.length) {
+      console.warn(yellow(gameState.warning));
+      gameState.warning = '';
+    }
     userAnswer = await question('What is your next move?\n - ');
 
     switch ((userAnswer as string).toLowerCase()) {
@@ -49,17 +58,36 @@ const playGame = async () => {
                                         '[fo] = foundation\t'+
                                         '[f#] = foundation #\n - ');
 
-        const [target, destination] = (userMove as string).split(',');
+        const [sTarget, sDestination] = (userMove as string).split(',');
+        if (isValidDestination(sDestination) && isValidTarget(sTarget)) {
+          target = sTarget as Targets;
+          destination = sDestination as Destinations;
+        } else if (!isValidDestination(sDestination)) {
+          gameState.warning = errors.invalidDest.message;
+          break;
+        } else if (!isValidTarget(sTarget) ) {
+          gameState.warning = errors.invalidTarget.message;
+          break;
+        }
+
         if (target === 'wa') {
           if (isValidPile(destination)) {
-            moveFromWasteToPile(gameState.waste, gameState.piles[Number(destination[1]) - 1]);
+            const newState = moveFromWasteToPile(gameState.waste, gameState.piles[Number(destination[1]) - 1]);
+            gameState.waste = newState.waste;
+            gameState.piles[Number(destination[1]) - 1] = newState.pile;
+            gameState.warning = newState.warning;
           } else if (destination === 'fo') {
             const newState = fromWasteToFoundation(gameState.waste, gameState.foundations);
             gameState.waste = newState.waste;
             gameState.foundations = newState.foundations;
             gameState.warning = newState.warning;
           } else if (isValidFoundation(destination)) {
-            fromWasteToFoundation(gameState.waste, gameState.foundations, destination);
+            const newState = fromWasteToFoundation(gameState.waste, gameState.foundations, destination);
+            gameState.waste = newState.waste;
+            gameState.foundations = newState.foundations;
+            gameState.warning = newState.warning;
+          } else {
+            gameState.warning = errors.invalidDest.message;
           }
         } else if (isValidPile(target)) {
           const targetPile = Number(target[1]) - 1;
@@ -68,12 +96,19 @@ const playGame = async () => {
 
             gameState.piles[targetPile] = newState.cardPile;
             gameState.foundations = newState.foundations;
+            gameState.warning = newState.warning;
+          } else if (isValidFoundation(destination)) {
+            const newState = fromPileToFoundation(gameState.piles[targetPile], gameState.foundations, destination);
+            gameState.piles[targetPile] = newState.cardPile;
+            gameState.foundations = newState.foundations;
+            gameState.warning = newState.warning;
           } else if (isValidPile(destination)) {
             const destPile = Number(destination[1]) - 1;
             const pileIndex = await question('what index would  you like to start at?\n - ');
             const newState = moveFromPileToPile(gameState.piles[targetPile], (pileIndex as number), gameState.piles[destPile]);
             gameState.piles[targetPile] = newState.target;
             gameState.piles[destPile] = newState.destination;
+            gameState.warning = newState.warning;
           }
         } else if (isValidFoundation(target) && isValidPile(destination)) {
           const newState = fromFoundationToPile(
@@ -81,6 +116,9 @@ const playGame = async () => {
             gameState.piles[Number(destination[1]) - 1]);
           gameState.foundations[target] = newState.foundation;
           gameState.piles[Number(destination[1]) - 1] = newState.pile;
+          gameState.warning = newState.warning;
+        } else {
+          gameState.warning = errors.invalidTarget.message;
         }
         break;
       }
@@ -94,6 +132,10 @@ const playGame = async () => {
         break;
       }
     }
+    if (gameState.warning.length === 0) {
+      gameState.actions.push({ move: userAnswer, target, destination })
+      gameState.numMoves++
+    };
   }
 }
 

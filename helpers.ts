@@ -2,10 +2,10 @@ import { red, dim } from 'chalk';
 const readline = require('readline');
 const { stdin: input, stdout: output } = require('process');
 import { SUIT, RANK, errors } from "./constants"
-import { yellow } from "chalk";
 import {
   Card,
   Foundations,
+  GameAction,
   GameState
 } from "./types/types"
 
@@ -182,6 +182,15 @@ type PileNames = (typeof validPiles)[number];
 const isValidPile =
   (x: any): x is PileNames => validPiles.includes(x);
 
+const validDestinations = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'fo', 'f1', 'f2', 'f3', 'f4', 'wa'] as const;
+type DestinationNames = (typeof validDestinations)[number];
+const isValidDestination =
+  (x: any): x is DestinationNames => validDestinations.includes(x);
+
+const isValidTarget = (target: any) => {
+  return target === 'wa' || isValidDestination(target);
+}
+
 const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?: FoundationNames) => {
   let warning = '';
   try {
@@ -206,8 +215,6 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
         isInSequence(foundations[foIndex][0], waste[0])) {
         foundations[foIndex].unshift(waste.shift());
       }
-      if (waste.length) { waste[0].isVisible = true; }
-
     } else {
 
       /*
@@ -253,7 +260,8 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
   }
   return { waste, foundations, warning };
 };
-const fromPileToFoundation = (cardPile: Card[], foundations: Foundations) => {
+const fromPileToFoundation = (cardPile: Card[], foundations: Foundations, foIndex?: FoundationNames) => {
+  let warning = '';
   try {
     /* if the card pile is empty, throw a warning and return the params as-is */
     if (cardPile.length === 0) {
@@ -262,30 +270,51 @@ const fromPileToFoundation = (cardPile: Card[], foundations: Foundations) => {
     /* save the first card in the card pile to compare at the end */
     const cardToMove = cardPile[cardPile.length - 1];
 
-    /* if the card is an Ace, look for the first empty foudnation to put it in */
-    if (cardToMove.rank === RANK.RANK_A) {
-      for (const f in foundations) {
-        if (foundations[f].length === 0) {
-          foundations[f].push(cardPile.pop());
-          if (cardPile.length) { cardPile[cardPile.length - 1].isVisible = true; }
-          break;
+    if (foIndex) {
+      const foLength = foundations[foIndex].length;
+      if (cardToMove.rank === RANK.RANK_A && !foLength) {
+        foundations[foIndex].push(cardPile.pop());
+      } else if (
+        foLength &&
+        isSameSuit(cardToMove, foundations[foIndex][0]) &&
+        isInSequence(foundations[foIndex][0], cardToMove)) {
+        foundations[foIndex].unshift(cardPile.pop());
+      } else {
+        if (!foLength) {
+          throw errors.emptyFoundationError;
+        } else if (!isInSequence(foundations[foIndex][0], cardToMove[0])) {
+          throw errors.notInSequence;
+        } else if (!isSameSuit(cardToMove[0], foundations[foIndex][0])) {
+          throw errors.suitNotMatching;
         }
       }
     } else {
-      /* if it's not an Ace, look for the foundation that
-      matches it's suit and check if it's sequential. if
-      it is, move it from the the pile to the top of the
-      foundation (beginning of the array) */
-      for (const f in foundations) {
-        if (foundations[f].length > 0 &&
-          isSameSuit(foundations[f][0], cardPile[cardPile.length - 1]) &&
-          isInSequence(foundations[f][0], cardPile[cardPile.length - 1])) {
-          foundations[f].unshift(cardPile.pop());
-          if (cardPile.length) { cardPile[cardPile.length - 1].isVisible = true; }
-          break;
+      /* if the card is an Ace, look for the first empty foudnation to put it in */
+      if (cardToMove.rank === RANK.RANK_A) {
+        for (const f in foundations) {
+          if (foundations[f].length === 0) {
+            foundations[f].push(cardPile.pop());
+            if (cardPile.length) { cardPile[cardPile.length - 1].isVisible = true; }
+            break;
+          }
+        }
+      } else {
+        /* if it's not an Ace, look for the foundation that
+        matches it's suit and check if it's sequential. if
+        it is, move it from the the pile to the top of the
+        foundation (beginning of the array) */
+        for (const f in foundations) {
+          if (foundations[f].length > 0 &&
+            isSameSuit(foundations[f][0], cardToMove) &&
+            isInSequence(foundations[f][0], cardToMove)) {
+            foundations[f].unshift(cardPile.pop());
+            if (cardPile.length) { cardPile[cardPile.length - 1].isVisible = true; }
+            break;
+          }
         }
       }
     }
+
 
     /* if card at the top of the card pile is the same as it was
     before that means this was not valid to move, so throw a warning */
@@ -294,16 +323,17 @@ const fromPileToFoundation = (cardPile: Card[], foundations: Foundations) => {
     }
 
   } catch (error) {
-    console.warn(yellow(error.message));
+    warning = error.message;
   }
-  return { cardPile, foundations };
+  return { cardPile, foundations, warning };
 };
 
 const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
+  let warning = '';
   try {
     /* if the waste is empty, throw a warning and return the params as-is */
     if (waste.length === 0) {
-      throw errors.invalidMove;
+      throw errors.emptyWasteError;
     }
     /* save the first card in the waste to compare at the end */
     const cardToMove = waste[0];
@@ -322,20 +352,32 @@ const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
     same as it was before that means this was not
     valid to move, so throw a warning */
     if (cardToMove === waste[0]) {
-      throw errors.invalidMove;
+      if (!isInSequence(waste[0], pile[pile.length - 1])) {
+        throw errors.notInSequence;
+      } else if (!isAlternateColor(waste[0], pile[pile.length - 1])) {
+        throw errors.notAlternatingColor;
+      } else {
+        throw errors.invalidMove;
+      }
     }
 
   } catch (error) {
-    console.warn(yellow(error.message));
+    warning = error.message;
   }
-  return { waste, pile };
+  return { waste, pile, warning };
 };
 
 const moveFromPileToPile = (target: Card[], index: number, destination: Card[]) => {
-  if (target.length === 0
-    || index > target.length
-    || target[target.length - index].isVisible === false) {
-    return { target, destination };
+  let warning = '';
+  if (target.length === 0) {
+    warning = errors.invalidTarget.message;
+    return { target, destination, warning };
+  } else if (index <= 0 || index > target.length) {
+    warning = errors.invalidIndex.message;
+    return { target, destination, warning };
+  } else if (target[target.length - index].isVisible === false) {
+    warning = errors.notVisibleError.message;
+    return { target, destination, warning };
   }
   const cardsToMove = target.slice(target.length - index);
   if ((destination.length === 0) ||
@@ -349,10 +391,11 @@ const moveFromPileToPile = (target: Card[], index: number, destination: Card[]) 
       target[target.length - 1].isVisible = true;
     }
   }
-  return { target, destination };
+  return { target, destination, warning };
 }
 
 const fromFoundationToPile = (foundation: Card[], pile: Card[]) => {
+  let warning = '';
   try {
     if (!foundation.length) {
       throw errors.invalidMove;
@@ -367,10 +410,20 @@ const fromFoundationToPile = (foundation: Card[], pile: Card[]) => {
       throw errors.invalidMove;
     }
   } catch (error) {
-    console.warn(yellow(error.message));
+    warning = error.message;
   } finally {
-    return { foundation, pile };
+    return { foundation, pile, warning };
   }
+}
+
+const prepareToDisplayAction = (action: GameAction) => {
+  let preparedAction = '';
+  if (action.move === 'dr' || action.move === 'draw') {
+    preparedAction = 'draw a card';
+  } else if (action.move === 'mv' || action.move === 'move') {
+    preparedAction = `moved ${action.target} ➡️  ${action.destination}`;
+  }
+  return preparedAction;
 }
 
 const initiateGame = () => {
@@ -403,12 +456,21 @@ const initiateGame = () => {
     } as Foundations,
     piles,
     warning: '',
+    numMoves: 0,
+    actions: [] as GameAction[],
   };
 
   return gameState;
 };
 
-const displayBoard = ({ stockpile, waste, foundations, piles }: GameState) => {
+const displayBoard = ({
+  stockpile,
+  waste,
+  foundations,
+  piles,
+  numMoves,
+  actions,
+}: GameState) => {
   const sotckpileCount = stockpile.length;
   const { f1, f2, f3, f4 } = foundations;
   const topOfWaste = prepareToDisplayCard(waste[0]);
@@ -416,6 +478,7 @@ const displayBoard = ({ stockpile, waste, foundations, piles }: GameState) => {
   const topOfF2 = prepareToDisplayCard(f2[0]);
   const topOfF3 = prepareToDisplayCard(f3[0]);
   const topOfF4 = prepareToDisplayCard(f4[0]);
+  const lastAction = actions.length ? prepareToDisplayAction(actions[actions.length - 1]) : undefined;
   const maxPileSize = Math.max(piles[0].length,
     piles[1].length,
     piles[2].length,
@@ -439,11 +502,12 @@ const displayBoard = ({ stockpile, waste, foundations, piles }: GameState) => {
   }
 
 
-  console.log('[Stockpile]\t[Waste]\t\t[Foundations]');
-  console.log(`[${sotckpileCount}]\t\t[${topOfWaste}]\t\t[${topOfF1}] [${topOfF2}] [${topOfF3}] [${topOfF4}]`);
+  console.log('[Stockpile]\t[Waste]\t\t[Foundations]\t\t[Moves]');
+  console.log(`[${sotckpileCount}]\t\t[${topOfWaste}]\t\t[${topOfF1}] [${topOfF2}] [${topOfF3}] [${topOfF4}]\t\t[${numMoves}]`);
   console.log('====================================================================');
   console.log('Pile1\tPile2\tPile3\tPile4\tPile5\tPile6\tPile7');
   console.log(displayPiles);
+  console.log(`Last action: ${lastAction ? lastAction : 'No Actions Taken'}`)
 };
 
 export {
@@ -471,5 +535,7 @@ export {
   displayBoard,
   isValidFoundation,
   isValidPile,
+  isValidDestination,
+  isValidTarget,
   fromFoundationToPile,
 }
