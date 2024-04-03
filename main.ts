@@ -16,6 +16,8 @@ import {
   isValidPile,
   isValidDestination,
   isValidTarget,
+  reverseLastMove,
+  recordMove,
 } from './helpers';
 import { errors } from './constants';
 import { Destinations, Targets } from './types/types';
@@ -23,12 +25,14 @@ import { Destinations, Targets } from './types/types';
 const playGame = async () => {
   let gameState = initiateGame();
   let userAnswer;
+  let index = 0;
   let target: Targets;
   let destination: Destinations;
 
   console.log('Let\'s play Solitaire!');
   while (userAnswer !== 'q' && userAnswer !== 'quit') {
     console.clear();
+    index = 0;
     displayBoard(gameState);
     if (gameState.warning.length) {
       console.warn(yellow(gameState.warning));
@@ -81,6 +85,7 @@ const playGame = async () => {
             gameState.waste = newState.waste;
             gameState.foundations = newState.foundations;
             gameState.warning = newState.warning;
+            destination = newState.specificFoundation;
           } else if (isValidFoundation(destination)) {
             const newState = fromWasteToFoundation(gameState.waste, gameState.foundations, destination);
             gameState.waste = newState.waste;
@@ -104,8 +109,8 @@ const playGame = async () => {
             gameState.warning = newState.warning;
           } else if (isValidPile(destination)) {
             const destPile = Number(destination[1]) - 1;
-            const pileIndex = await question('what index would  you like to start at?\n - ');
-            const newState = moveFromPileToPile(gameState.piles[targetPile], (pileIndex as number), gameState.piles[destPile]);
+            index = (await question('what index would  you like to start at?\n - ') as number);
+            const newState = moveFromPileToPile(gameState.piles[targetPile], index, gameState.piles[destPile]);
             gameState.piles[targetPile] = newState.target;
             gameState.piles[destPile] = newState.destination;
             gameState.warning = newState.warning;
@@ -122,6 +127,11 @@ const playGame = async () => {
         }
         break;
       }
+      case 'un':
+      case 'undo': {
+        gameState = reverseLastMove(gameState);
+        break;
+      }
       case 'q':
       case 'quit': {
         rl.close();
@@ -132,10 +142,9 @@ const playGame = async () => {
         break;
       }
     }
-    if (gameState.warning.length === 0) {
-      gameState.actions.push({ move: userAnswer, target, destination })
-      gameState.numMoves++
-    };
+    const newState = recordMove(gameState, { move: userAnswer, target, destination, index });
+    gameState.actions = newState.actions;
+    gameState.numMoves = newState.numMoves;
   }
 }
 

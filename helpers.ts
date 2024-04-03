@@ -6,7 +6,7 @@ import {
   Card,
   Foundations,
   GameAction,
-  GameState
+  GameState,
 } from "./types/types"
 
 /*
@@ -159,6 +159,12 @@ const fromStockpileToWaste = (stockpile: Card[], waste: Card[]) => {
   waste[0].isVisible = true;
 };
 
+const reverseDraw = (waste: Card[], stockpile: Card[]) => {
+  stockpile.unshift(waste.shift());
+  stockpile[0].isVisible = false;
+  return { waste, stockpile };
+}
+
 /*
 * Reverses the waste and moves it into the stockpile,
 * then empties the waste.
@@ -193,6 +199,7 @@ const isValidTarget = (target: any) => {
 
 const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?: FoundationNames) => {
   let warning = '';
+  let specificFoundation: FoundationNames;
   try {
     /*
     * if the waste is empty, throw a warning and return the params as-is
@@ -207,6 +214,7 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
 
     if (foIndex) {
       const foLength = foundations[foIndex].length;
+      specificFoundation = foIndex;
       if (waste[0].rank === RANK.RANK_A) {
         foundations[foIndex].push(waste.shift());
       } else if (
@@ -216,7 +224,6 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
         foundations[foIndex].unshift(waste.shift());
       }
     } else {
-
       /*
       * if the card is an Ace, look for the first empty foudnation to put it in
       */
@@ -225,6 +232,7 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
           if (foundations[f].length === 0) {
             foundations[f].push(waste.shift());
             if (waste.length) { waste[0].isVisible = true; }
+            specificFoundation = f as FoundationNames;
             break;
           }
         }
@@ -241,6 +249,7 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
             isInSequence(foundations[f][0], waste[0])) {
             foundations[f].unshift(waste.shift());
             if (waste.length) { waste[0].isVisible = true; }
+            specificFoundation = f as FoundationNames;
             break;
           }
         }
@@ -258,7 +267,7 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
   } catch (error) {
     warning = error.message;
   }
-  return { waste, foundations, warning };
+  return { waste, foundations, warning, specificFoundation };
 };
 const fromPileToFoundation = (cardPile: Card[], foundations: Foundations, foIndex?: FoundationNames) => {
   let warning = '';
@@ -367,6 +376,11 @@ const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
   return { waste, pile, warning };
 };
 
+const returnToWaste = (cardPile: Card[], waste: Card[]) => {
+  waste.unshift(cardPile.pop());
+  return { cardPile, waste };
+}
+
 const moveFromPileToPile = (target: Card[], index: number, destination: Card[]) => {
   let warning = '';
   if (target.length === 0) {
@@ -421,7 +435,11 @@ const prepareToDisplayAction = (action: GameAction) => {
   if (action.move === 'dr' || action.move === 'draw') {
     preparedAction = 'draw a card';
   } else if (action.move === 'mv' || action.move === 'move') {
-    preparedAction = `moved ${action.target} ➡️  ${action.destination}`;
+    if (action.index) {
+      preparedAction = `moved ${action.index} ${action.index > 1 ? 'cards' : 'card'} from ${action.target} ➡️  ${action.destination}`;
+    } else {
+      preparedAction = `moved ${action.target} ➡️  ${action.destination}`;
+    }
   }
   return preparedAction;
 }
@@ -510,6 +528,90 @@ const displayBoard = ({
   console.log(`Last action: ${lastAction ? lastAction : 'No Actions Taken'}`)
 };
 
+const removeFromActionList = (gameState: GameState) => {
+  gameState.actions.pop();
+  gameState.numMoves--;
+}
+
+const recordMove = (
+  { warning, actions, numMoves }: GameState,
+  { move, target, destination, index }: GameAction
+) => {
+  if (warning.length === 0 && move !== 'un' && move !== 'undo') {
+    if (move === 'dr' || move === 'draw') {
+      actions.push({ move, target: 'st', destination: 'wa' })
+    } else if (index) {
+      actions.push({ move, target, destination, index })
+    } else {
+      actions.push({ move, target, destination })
+    }
+    numMoves++
+  }
+  return { actions, numMoves };
+}
+
+const reversePileToPile = (destination: Card[], index: number, target: Card[]) => {
+  if (target.length) {
+    target[target.length - 1].isVisible = false;
+  }
+  const cardsToMove = destination.slice(destination.length - index);
+  cardsToMove.forEach((card: Card) => {
+    destination.pop();
+    target.push(card);
+  });
+  return { target, destination };
+}
+
+const reverseLastMove = (gameState: GameState) => {
+  const { move,
+    target,
+    destination,
+    index
+  }: GameAction = gameState.actions[gameState.actions.length - 1];
+
+  switch (move) {
+    case 'dr':
+    case 'draw': {
+      const newState = reverseDraw(gameState.waste, gameState.stockpile);
+      gameState.waste = newState.waste;
+      gameState.stockpile = newState.stockpile;
+      removeFromActionList(gameState);
+      break;
+    }
+    case 'mv':
+    case 'move': {
+      if (target === 'wa') {
+        if (isValidPile(destination)) {
+          const destPile = Number(destination[1]) - 1;
+          const newState = returnToWaste(gameState.piles[destPile], gameState.waste);
+          gameState.piles[destPile] = newState.cardPile;
+          gameState.waste = newState.waste;
+          removeFromActionList(gameState);
+        } else if (isValidFoundation(destination)) {
+          const newState = returnToWaste(gameState.foundations[destination], gameState.waste);
+          gameState.foundations[destination] = newState.cardPile;
+          gameState.waste = newState.waste;
+          removeFromActionList(gameState);
+        }
+      } else if (isValidPile(target)) {
+        if (isValidPile(destination)) {
+          const tPile = Number(target[1]) - 1;
+          const dPile = Number(destination[1]) - 1;
+          const newState = reversePileToPile(gameState.piles[dPile], index, gameState.piles[tPile]);
+          gameState.piles[tPile] = newState.target;
+          gameState.piles[dPile] = newState.destination;
+          removeFromActionList(gameState);
+        }
+      }
+      break;
+    }
+    default: {
+      break;
+    }
+  }
+  return gameState;
+}
+
 export {
   rl,
   question,
@@ -530,6 +632,7 @@ export {
   fromWasteToFoundation,
   fromPileToFoundation,
   moveFromWasteToPile,
+  returnToWaste,
   moveFromPileToPile,
   initiateGame,
   displayBoard,
@@ -538,4 +641,6 @@ export {
   isValidDestination,
   isValidTarget,
   fromFoundationToPile,
+  recordMove,
+  reverseLastMove,
 }
