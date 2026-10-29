@@ -24,6 +24,7 @@ type GameAction = {
   target: Targets | 'st';
   destination: Destinations | 'wa';
   index?: number;
+  stockpileRefilledFlag?: boolean;
 };
 
 type GameState = {

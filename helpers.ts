@@ -178,6 +178,18 @@ const refillStockpile = (stockpile: Card[], waste: Card[]) => {
   return { stockpile, waste };
 };
 
+const reverseRefillStockpile = (waste: Card[], stockpile: Card[]) => {
+  if (stockpile.length && waste.length) {
+    waste.unshift(...stockpile.reverse());
+    waste = waste.map((card: Card) => { card.isVisible = true; return card; })
+    const stockpileLen = stockpile.length;
+    for (let i = 0; i < stockpileLen; i++) {
+      stockpile.pop();
+    }
+  }
+  return { waste, stockpile};
+}
+
 const validFoundations = ['f1', 'f2', 'f3', 'f4'] as const;
 type FoundationNames = (typeof validFoundations)[number];
 const isValidFoundation =
@@ -271,6 +283,7 @@ const fromWasteToFoundation = (waste: Card[], foundations: Foundations, foIndex?
 };
 const fromPileToFoundation = (cardPile: Card[], foundations: Foundations, foIndex?: FoundationNames) => {
   let warning = '';
+  let specificFoundation: FoundationNames;
   try {
     /* if the card pile is empty, throw a warning and return the params as-is */
     if (cardPile.length === 0) {
@@ -281,6 +294,7 @@ const fromPileToFoundation = (cardPile: Card[], foundations: Foundations, foInde
 
     if (foIndex) {
       const foLength = foundations[foIndex].length;
+      specificFoundation = foIndex;
       if (cardToMove.rank === RANK.RANK_A && !foLength) {
         foundations[foIndex].push(cardPile.pop());
       } else if (
@@ -288,6 +302,11 @@ const fromPileToFoundation = (cardPile: Card[], foundations: Foundations, foInde
         isSameSuit(cardToMove, foundations[foIndex][0]) &&
         isInSequence(foundations[foIndex][0], cardToMove)) {
         foundations[foIndex].unshift(cardPile.pop());
+
+        /*
+          * Reveal the next card in the pile
+        */
+        if (cardPile.length) { cardPile[cardPile.length - 1].isVisible = true; }
       } else {
         if (!foLength) {
           throw errors.emptyFoundationError;
@@ -298,26 +317,33 @@ const fromPileToFoundation = (cardPile: Card[], foundations: Foundations, foInde
         }
       }
     } else {
-      /* if the card is an Ace, look for the first empty foudnation to put it in */
+      /*
+        * if the card is an Ace, look for the
+        * first empty foudnation to put it in
+      */
       if (cardToMove.rank === RANK.RANK_A) {
         for (const f in foundations) {
           if (foundations[f].length === 0) {
             foundations[f].push(cardPile.pop());
             if (cardPile.length) { cardPile[cardPile.length - 1].isVisible = true; }
+            specificFoundation = f as FoundationNames;
             break;
           }
         }
       } else {
-        /* if it's not an Ace, look for the foundation that
-        matches it's suit and check if it's sequential. if
-        it is, move it from the the pile to the top of the
-        foundation (beginning of the array) */
+        /*
+          * if it's not an Ace, look for the foundation that
+          * matches it's suit and check if it's sequential. if
+          * it is, move it from the the pile to the top of the
+          * foundation (beginning of the array)
+        */
         for (const f in foundations) {
           if (foundations[f].length > 0 &&
             isSameSuit(foundations[f][0], cardToMove) &&
             isInSequence(foundations[f][0], cardToMove)) {
             foundations[f].unshift(cardPile.pop());
             if (cardPile.length) { cardPile[cardPile.length - 1].isVisible = true; }
+            specificFoundation = f as FoundationNames;
             break;
           }
         }
@@ -327,14 +353,14 @@ const fromPileToFoundation = (cardPile: Card[], foundations: Foundations, foInde
 
     /* if card at the top of the card pile is the same as it was
     before that means this was not valid to move, so throw a warning */
-    if (cardPile.length && cardToMove === cardPile[cardPile.length - 1]) {
+    if (cardPile.length && cardToMove === cardPile[cardPile.length]) {
       throw errors.invalidMove;
     }
 
   } catch (error) {
     warning = error.message;
   }
-  return { cardPile, foundations, warning };
+  return { cardPile, foundations, warning, specificFoundation };
 };
 
 const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
@@ -372,40 +398,52 @@ const moveFromWasteToPile = (waste: Card[], pile: Card[]) => {
 
   } catch (error) {
     warning = error.message;
+  } finally {
+    return warning;
   }
-  return { waste, pile, warning };
 };
 
-const returnToWaste = (cardPile: Card[], waste: Card[]) => {
+const reverseWasteToPile = (cardPile: Card[], waste: Card[]) => {
   waste.unshift(cardPile.pop());
   return { cardPile, waste };
 }
 
+const reverseWasteToFoundation = (foundation: Card[], waste: Card[]) => {
+  waste.unshift(foundation.shift());
+  return { foundation, waste };
+}
+
 const moveFromPileToPile = (target: Card[], index: number, destination: Card[]) => {
   let warning = '';
-  if (target.length === 0) {
-    warning = errors.invalidTarget.message;
-    return { target, destination, warning };
-  } else if (index <= 0 || index > target.length) {
-    warning = errors.invalidIndex.message;
-    return { target, destination, warning };
-  } else if (target[target.length - index].isVisible === false) {
-    warning = errors.notVisibleError.message;
-    return { target, destination, warning };
-  }
-  const cardsToMove = target.slice(target.length - index);
-  if ((destination.length === 0) ||
-    (isInSequence(cardsToMove[0], destination[destination.length - 1]) &&
-      isAlternateColor(cardsToMove[0], destination[destination.length - 1]))) {
-    cardsToMove.forEach((card: Card) => {
-      target.pop();
-      destination.push(card);
-    });
-    if (target.length && !target[target.length - 1].isVisible) {
-      target[target.length - 1].isVisible = true;
+  try {
+    if (target.length === 0) {
+      throw errors.invalidTarget;
+    } else if (index <= 0 || index > target.length) {
+      throw errors.invalidIndex;
+    } else if (target[target.length - index].isVisible === false) {
+      throw errors.notVisibleError;
     }
+    const cardsToMove = target.slice(target.length - index);
+    if ((destination.length === 0) ||
+      (isInSequence(cardsToMove[0], destination[destination.length - 1]) &&
+        isAlternateColor(cardsToMove[0], destination[destination.length - 1]))) {
+      cardsToMove.forEach((card: Card) => {
+        target.pop();
+        destination.push(card);
+      });
+      if (target.length > 0 && !target[target.length - 1].isVisible) {
+        target[target.length - 1].isVisible = true;
+      }
+    } else if (!isInSequence(cardsToMove[0], destination[destination.length - 1])) {
+      throw errors.notInSequence;
+    } else if (!isAlternateColor(cardsToMove[0], destination[destination.length - 1])) {
+      throw errors.notAlternatingColor;
+    }
+  } catch (error) {
+    warning = error.message;
+  } finally {
+    return warning;
   }
-  return { target, destination, warning };
 }
 
 const fromFoundationToPile = (foundation: Card[], pile: Card[]) => {
@@ -535,11 +573,11 @@ const removeFromActionList = (gameState: GameState) => {
 
 const recordMove = (
   { warning, actions, numMoves }: GameState,
-  { move, target, destination, index }: GameAction
+  { move, target, destination, index, stockpileRefilledFlag }: GameAction
 ) => {
   if (warning.length === 0 && move !== 'un' && move !== 'undo') {
     if (move === 'dr' || move === 'draw') {
-      actions.push({ move, target: 'st', destination: 'wa' })
+      actions.push({ move, target: 'st', destination: 'wa', stockpileRefilledFlag })
     } else if (index) {
       actions.push({ move, target, destination, index })
     } else {
@@ -562,20 +600,39 @@ const reversePileToPile = (destination: Card[], index: number, target: Card[]) =
   return { target, destination };
 }
 
-const reverseLastMove = (gameState: GameState) => {
-  const { move,
+const reversePileToFoundation = (pile: Card[], foundation: Card[]) => {
+  if (pile.length) {
+    pile[pile.length - 1].isVisible = false;
+  }
+  pile.push(foundation.shift());
+  return { pile, foundation };
+}
+
+const reverseFoundationToPile = (foundation: Card[], pile: Card[]) => {
+  if (pile.length > 1 && pile[pile.length - 2].isVisible === false) {
+    pile[pile.length - 1].isVisible = false;
+  }
+  foundation.push(pile.pop());
+  return { foundation, pile };
+}
+
+const undoLastMove = (gameState: GameState) => {
+  const {
+    move,
     target,
     destination,
-    index
+    index,
+    stockpileRefilledFlag
   }: GameAction = gameState.actions[gameState.actions.length - 1];
 
   switch (move) {
     case 'dr':
     case 'draw': {
-      const newState = reverseDraw(gameState.waste, gameState.stockpile);
-      gameState.waste = newState.waste;
-      gameState.stockpile = newState.stockpile;
-      removeFromActionList(gameState);
+      if (stockpileRefilledFlag === true) {
+        reverseRefillStockpile(gameState.waste, gameState.stockpile)
+      } else {
+        reverseDraw(gameState.waste, gameState.stockpile);
+      }
       break;
     }
     case 'mv':
@@ -583,25 +640,21 @@ const reverseLastMove = (gameState: GameState) => {
       if (target === 'wa') {
         if (isValidPile(destination)) {
           const destPile = Number(destination[1]) - 1;
-          const newState = returnToWaste(gameState.piles[destPile], gameState.waste);
-          gameState.piles[destPile] = newState.cardPile;
-          gameState.waste = newState.waste;
-          removeFromActionList(gameState);
+          reverseWasteToPile(gameState.piles[destPile], gameState.waste);
         } else if (isValidFoundation(destination)) {
-          const newState = returnToWaste(gameState.foundations[destination], gameState.waste);
-          gameState.foundations[destination] = newState.cardPile;
-          gameState.waste = newState.waste;
-          removeFromActionList(gameState);
+          reverseWasteToFoundation(gameState.foundations[destination], gameState.waste);
         }
       } else if (isValidPile(target)) {
+        const tPile = Number(target[1]) - 1;
         if (isValidPile(destination)) {
-          const tPile = Number(target[1]) - 1;
           const dPile = Number(destination[1]) - 1;
-          const newState = reversePileToPile(gameState.piles[dPile], index, gameState.piles[tPile]);
-          gameState.piles[tPile] = newState.target;
-          gameState.piles[dPile] = newState.destination;
-          removeFromActionList(gameState);
+          reversePileToPile(gameState.piles[dPile], index, gameState.piles[tPile]);
+        } else if (isValidFoundation(destination)) {
+          reversePileToFoundation(gameState.piles[tPile], gameState.foundations[destination]);
         }
+      } else if (isValidFoundation(target)) {
+        const dPile = Number(destination[1]) - 1;
+        reverseFoundationToPile(gameState.foundations[target], gameState.piles[dPile]);
       }
       break;
     }
@@ -609,8 +662,16 @@ const reverseLastMove = (gameState: GameState) => {
       break;
     }
   }
+  removeFromActionList(gameState);
   return gameState;
 }
+
+const devDrawWholeDeck = ({ stockpile, waste }: GameState) => {
+  const numCardsInStockpile = stockpile.length;
+  for (let i = 0; i < numCardsInStockpile - 1; i++) {
+    fromStockpileToWaste(stockpile, waste);
+  }
+};
 
 export {
   rl,
@@ -632,7 +693,6 @@ export {
   fromWasteToFoundation,
   fromPileToFoundation,
   moveFromWasteToPile,
-  returnToWaste,
   moveFromPileToPile,
   initiateGame,
   displayBoard,
@@ -642,5 +702,6 @@ export {
   isValidTarget,
   fromFoundationToPile,
   recordMove,
-  reverseLastMove,
+  undoLastMove,
+  devDrawWholeDeck,
 }

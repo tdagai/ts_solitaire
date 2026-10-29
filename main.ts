@@ -16,8 +16,9 @@ import {
   isValidPile,
   isValidDestination,
   isValidTarget,
-  reverseLastMove,
+  undoLastMove,
   recordMove,
+  devDrawWholeDeck,
 } from './helpers';
 import { errors } from './constants';
 import { Destinations, Targets } from './types/types';
@@ -28,11 +29,14 @@ const playGame = async () => {
   let index = 0;
   let target: Targets;
   let destination: Destinations;
+  let stockpileRefilledFlag = false;
 
   console.log('Let\'s play Solitaire!');
   while (userAnswer !== 'q' && userAnswer !== 'quit') {
     console.clear();
     index = 0;
+    console.log('stockpileRefilledFlag:', stockpileRefilledFlag);
+    stockpileRefilledFlag = false;
     displayBoard(gameState);
     if (gameState.warning.length) {
       console.warn(yellow(gameState.warning));
@@ -41,12 +45,16 @@ const playGame = async () => {
     userAnswer = await question('What is your next move?\n - ');
 
     switch ((userAnswer as string).toLowerCase()) {
+      case 'dwd': {
+        devDrawWholeDeck(gameState);
+      }
       case 'dr':
       case 'draw': {
         if (gameState.stockpile.length) {
           fromStockpileToWaste(gameState.stockpile, gameState.waste);
         } else {
           const result = refillStockpile(gameState.stockpile, gameState.waste);
+          stockpileRefilledFlag = true;
           gameState.stockpile = result.stockpile;
           gameState.waste = result.waste;
           fromStockpileToWaste(gameState.stockpile, gameState.waste);
@@ -76,10 +84,7 @@ const playGame = async () => {
 
         if (target === 'wa') {
           if (isValidPile(destination)) {
-            const newState = moveFromWasteToPile(gameState.waste, gameState.piles[Number(destination[1]) - 1]);
-            gameState.waste = newState.waste;
-            gameState.piles[Number(destination[1]) - 1] = newState.pile;
-            gameState.warning = newState.warning;
+            gameState.warning = moveFromWasteToPile(gameState.waste, gameState.piles[Number(destination[1]) - 1]);
           } else if (destination === 'fo') {
             const newState = fromWasteToFoundation(gameState.waste, gameState.foundations);
             gameState.waste = newState.waste;
@@ -102,18 +107,18 @@ const playGame = async () => {
             gameState.piles[targetPile] = newState.cardPile;
             gameState.foundations = newState.foundations;
             gameState.warning = newState.warning;
+            destination = newState.specificFoundation;
           } else if (isValidFoundation(destination)) {
             const newState = fromPileToFoundation(gameState.piles[targetPile], gameState.foundations, destination);
+
             gameState.piles[targetPile] = newState.cardPile;
             gameState.foundations = newState.foundations;
             gameState.warning = newState.warning;
+            destination = newState.specificFoundation;
           } else if (isValidPile(destination)) {
             const destPile = Number(destination[1]) - 1;
             index = (await question('what index would  you like to start at?\n - ') as number);
-            const newState = moveFromPileToPile(gameState.piles[targetPile], index, gameState.piles[destPile]);
-            gameState.piles[targetPile] = newState.target;
-            gameState.piles[destPile] = newState.destination;
-            gameState.warning = newState.warning;
+             gameState.warning = moveFromPileToPile(gameState.piles[targetPile], index, gameState.piles[destPile]);
           }
         } else if (isValidFoundation(target) && isValidPile(destination)) {
           const newState = fromFoundationToPile(
@@ -129,7 +134,11 @@ const playGame = async () => {
       }
       case 'un':
       case 'undo': {
-        gameState = reverseLastMove(gameState);
+        gameState = undoLastMove(gameState);
+        break;
+      }
+      case 'sh': {
+        gameState = initiateGame();
         break;
       }
       case 'q':
@@ -142,7 +151,7 @@ const playGame = async () => {
         break;
       }
     }
-    const newState = recordMove(gameState, { move: userAnswer, target, destination, index });
+    const newState = recordMove(gameState, { move: userAnswer, target, destination, index, stockpileRefilledFlag });
     gameState.actions = newState.actions;
     gameState.numMoves = newState.numMoves;
   }
